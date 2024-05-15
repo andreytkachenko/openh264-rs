@@ -4,7 +4,9 @@ use crate::error::NativeErrorExt;
 use crate::formats::YUVSource;
 use crate::{Error, OpenH264API, Timestamp};
 use openh264_sys2::{
-    videoFormatI420, ISVCDecoder, ISVCDecoderVtbl, SBufferInfo, SDecodingParam, SParserBsInfo, SSysMEMBuffer, API, DECODER_OPTION, DECODER_OPTION_ERROR_CON_IDC, DECODER_OPTION_NUM_OF_FRAMES_REMAINING_IN_BUFFER, DECODER_OPTION_NUM_OF_THREADS, DECODER_OPTION_TRACE_LEVEL, DECODING_STATE, WELS_LOG_DETAIL, WELS_LOG_QUIET
+    videoFormatI420, ISVCDecoder, ISVCDecoderVtbl, SBufferInfo, SDecodingParam, SParserBsInfo, SSysMEMBuffer, API,
+    DECODER_OPTION, DECODER_OPTION_ERROR_CON_IDC, DECODER_OPTION_NUM_OF_FRAMES_REMAINING_IN_BUFFER,
+    DECODER_OPTION_NUM_OF_THREADS, DECODER_OPTION_TRACE_LEVEL, DECODING_STATE, WELS_LOG_DETAIL, WELS_LOG_QUIET,
 };
 use std::os::raw::{c_int, c_long, c_uchar, c_void};
 use std::ptr::{addr_of_mut, null, null_mut};
@@ -185,12 +187,13 @@ impl Decoder {
 
         unsafe {
             self.raw_api
-                .decode_frame_no_delay(packet.as_ptr(), packet.len() as i32, &mut dst as *mut _, &mut buffer_info)
+                .decode_frame2(packet.as_ptr(), packet.len() as i32, &mut dst as *mut _, &mut buffer_info)
                 .ok()?;
 
             // Buffer status == 0 means frame data is not ready.
             if buffer_info.iBufferStatus == 0 {
                 let mut num_frames: DECODER_OPTION = 0;
+
                 self.raw_api()
                     .get_option(
                         DECODER_OPTION_NUM_OF_FRAMES_REMAINING_IN_BUFFER,
@@ -202,11 +205,11 @@ impl Decoder {
                 if num_frames > 0 {
                     self.raw_api().flush_frame(&mut dst as *mut _, &mut buffer_info).ok()?;
 
-                    if buffer_info.iBufferStatus == 0 {
-                        return Err(Error::msg(
-                            "Buffer status invalid, we have outstanding frames but failed to flush them.",
-                        ));
-                    }
+                    // if buffer_info.iBufferStatus == 0 {
+                    //     return Err(Error::msg(
+                    //         "Buffer status invalid, we have outstanding frames but failed to flush them.",
+                    //     ));
+                    // }
                 }
             }
 
